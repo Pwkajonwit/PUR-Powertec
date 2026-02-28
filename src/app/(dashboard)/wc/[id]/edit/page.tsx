@@ -4,30 +4,34 @@ import { use, useEffect, useState } from "react";
 import { useProject } from "@/context/ProjectContext";
 import { ArrowLeft, Save, FileText, Send, Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { POItem, PurchaseOrder } from "@/types/po";
+import { WCItem, WorkContract } from "@/types/wc";
 import { useAuth } from "@/context/AuthContext";
 import { doc, getDoc, updateDoc, serverTimestamp, query, collection, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { Vendor } from "@/types/vendor";
 
-export default function EditPOPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditWCPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
     const { currentProject } = useProject();
     const { user, userProfile } = useAuth();
     const router = useRouter();
 
-    const [po, setPo] = useState<PurchaseOrder | null>(null);
+    const [wc, setWc] = useState<WorkContract | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const [items, setItems] = useState<Partial<POItem>[]>([{ id: "1", description: "", quantity: 1, unit: "", unitPrice: 0, amount: 0 }]);
+    const [items, setItems] = useState<Partial<WCItem>[]>([{ id: "1", description: "", quantity: 1, unit: "", unitPrice: 0, amount: 0 }]);
     const [vendorId, setVendorId] = useState("");
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [vatRate, setVatRate] = useState(7);
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
-    const [creditDays, setCreditDays] = useState(30);
-    const [poNumber, setPoNumber] = useState("");
+    const [wcNumber, setWcNumber] = useState("");
+    const [title, setTitle] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [paymentTerms, setPaymentTerms] = useState("");
+    const [notes, setNotes] = useState("");
 
     const [companySettings, setCompanySettings] = useState<any>(null);
     const [availableUnits, setAvailableUnits] = useState<string[]>([]);
@@ -48,45 +52,39 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
             }
         }
 
-        async function fetchPO() {
+        async function fetchWC() {
             if (!resolvedParams.id) return;
             try {
-                const docRef = doc(db, "purchase_orders", resolvedParams.id);
+                const docRef = doc(db, "work_contracts", resolvedParams.id);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
-                    const data = { id: docSnap.id, ...docSnap.data() } as PurchaseOrder;
+                    const data = { id: docSnap.id, ...docSnap.data() } as WorkContract;
 
-                    // Only allow editing if draft or rejected
                     if (data.status !== 'draft' && data.status !== 'rejected') {
-                        alert("ใบสั่งซื้อนี้อยู่ในสถานะที่ไม่สามารถแก้ไขได้");
-                        router.push(`/po/${data.id}`);
+                        alert("ใบจ้างงานนี้อยู่ในสถานะที่ไม่สามารถแก้ไขได้");
+                        router.push(`/wc/${data.id}`);
                         return;
                     }
 
-                    setPo(data);
+                    setWc(data);
                     setVendorId(data.vendorId || "");
                     setVatRate(data.vatRate || 7);
-                    setCreditDays(data.creditDays ?? 30);
-                    setPoNumber(data.poNumber || "");
+                    setWcNumber(data.wcNumber || "");
+                    setTitle(data.title || "");
+                    setStartDate(data.startDate || "");
+                    setEndDate(data.endDate || "");
+                    setPaymentTerms(data.paymentTerms || "");
+                    setNotes(data.notes || "");
 
-                    if (data.signatureId) {
-                        setSelectedSignatureId(data.signatureId);
-                    }
-                    // auto-select first signature if available
-                    // This logic needs companySettings to be fetched first, so it's better placed after companySettings are loaded.
-                    // For now, we'll keep the original logic of setting signatureId from PO data.
-
-                    if (data.items && data.items.length > 0) {
-                        setItems(data.items);
-                    }
+                    if (data.signatureId) setSelectedSignatureId(data.signatureId);
+                    if (data.items && data.items.length > 0) setItems(data.items);
                 } else {
-                    console.error("No such document!");
-                    alert("ไม่พบข้อมูลใบสั่งซื้อ");
-                    router.push("/po");
+                    alert("ไม่พบข้อมูลใบจ้างงาน");
+                    router.push("/wc");
                 }
             } catch (error) {
-                console.error("Error fetching PO:", error);
+                console.error("Error fetching WC:", error);
             } finally {
                 setLoading(false);
             }
@@ -97,11 +95,7 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
                 const configRef = doc(db, "system_settings", "global_config");
                 const configSnap = await getDoc(configRef);
                 if (configSnap.exists() && configSnap.data().companySettings) {
-                    const settings = configSnap.data().companySettings;
-                    setCompanySettings(settings);
-
-                    // We only want to set a default if PO data hasn't already loaded and set one. 
-                    // To handle async race conditions easily, we can just do it if not set later or handled via selectedSignatureId directly.
+                    setCompanySettings(configSnap.data().companySettings);
                 }
                 if (configSnap.exists() && configSnap.data().itemUnits) {
                     setAvailableUnits(configSnap.data().itemUnits);
@@ -112,7 +106,7 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
         }
 
         fetchVendors();
-        fetchPO();
+        fetchWC();
         fetchCompanySettings();
     }, [resolvedParams.id, router]);
 
@@ -120,7 +114,7 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
         setItems([...items, { id: Date.now().toString(), description: "", quantity: 1, unit: "", unitPrice: 0, amount: 0 }]);
     };
 
-    const handleItemChange = (id: string, field: keyof POItem, value: any) => {
+    const handleItemChange = (id: string, field: keyof WCItem, value: any) => {
         const newItems = items.map(item => {
             if (item.id === id) {
                 const updated = { ...item, [field]: value };
@@ -142,21 +136,10 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
     const vatAmount = (subTotal * vatRate) / 100;
     const totalAmount = subTotal + vatAmount;
 
-    const handleUpdatePO = async (status: "draft" | "pending") => {
-        if (!currentProject) {
-            alert("ไม่พบข้อมูลโครงการ");
-            return;
-        }
-
-        if (!user) {
-            alert("ไม่พบข้อมูลผู้ใช้งานหรือไม่มีสิทธิ์ดำเนินการ");
-            return;
-        }
-
-        if (!vendorId) {
-            alert("กรุณาเลือกผู้ขาย/คู่ค้า");
-            return;
-        }
+    const handleUpdateWC = async (status: "draft" | "pending") => {
+        if (!currentProject) { alert("ไม่พบข้อมูลโครงการ"); return; }
+        if (!user) { alert("ไม่พบข้อมูลผู้ใช้งาน"); return; }
+        if (!vendorId) { alert("กรุณาเลือกผู้รับจ้าง"); return; }
 
         setSaving(true);
 
@@ -177,34 +160,37 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
                 signatureData = companySettings.signatures.find((s: any) => s.id === selectedSignatureId) || null;
             }
 
-            const updatedPO = {
-                // we don't change projectId, createdBy, createdAt etc.
-                poNumber: poNumber.trim(),
+            const updatedWC = {
+                wcNumber: wcNumber.trim(),
                 vendorId: vendorId || "unknown",
-                vendorName: selectedVendor ? selectedVendor.name : "ไม่ระบุผู้ขาย",
+                vendorName: selectedVendor ? selectedVendor.name : "ไม่ระบุผู้รับจ้าง",
+                title: title.trim(),
                 items: sanitizedItems,
                 subTotal,
                 vatRate,
                 vatAmount,
                 totalAmount,
                 status: status,
-                creditDays: creditDays,
+                startDate: startDate || "",
+                endDate: endDate || "",
+                paymentTerms: paymentTerms.trim(),
+                notes: notes.trim(),
                 signatureId: selectedSignatureId,
                 signatureData: signatureData,
                 updatedAt: serverTimestamp(),
             };
 
-            const poRef = doc(db, "purchase_orders", resolvedParams.id);
-            await updateDoc(poRef, updatedPO);
+            const wcRef = doc(db, "work_contracts", resolvedParams.id);
+            await updateDoc(wcRef, updatedWC);
 
             setSuccess(true);
             setTimeout(() => {
-                router.push(`/po/${resolvedParams.id}`);
+                router.push(`/wc/${resolvedParams.id}`);
             }, 2000);
 
         } catch (error) {
-            console.error("Error updating PO:", error);
-            alert("อัปเดตข้อมูลไม่สำเร็จ โปรดตรวจสอบหน้าต่าง Console");
+            console.error("Error updating WC:", error);
+            alert("อัปเดตข้อมูลไม่สำเร็จ");
             setSaving(false);
         }
     };
@@ -212,33 +198,33 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center p-12">
-                <Loader2 className="animate-spin w-8 h-8 text-blue-600 mb-4" />
-                <p className="text-slate-500">กำลังโหลดข้อมูลใบสั่งซื้อสำหรับการแก้ไข...</p>
+                <Loader2 className="animate-spin w-8 h-8 text-emerald-600 mb-4" />
+                <p className="text-slate-500">กำลังโหลดข้อมูลสำหรับการแก้ไข...</p>
             </div>
         );
     }
 
-    if (!po) return null; // handled in useEffect
+    if (!wc) return null;
 
     return (
         <div className="max-w-5xl mx-auto space-y-6">
 
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                    <Link href={`/po/${po.id}`} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-full transition-colors">
+                    <Link href={`/wc/${wc.id}`} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-full transition-colors">
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">แก้ไขใบสั่งซื้อ</h1>
+                        <h1 className="text-2xl font-bold text-slate-900">แก้ไขใบจ้างงาน</h1>
                         <p className="text-sm text-slate-500 mt-1">
-                            {po.poNumber} • โครงการ: <span className="font-semibold text-blue-600">{currentProject?.name}</span> ({currentProject?.code})
+                            {wc.wcNumber} • โครงการ: <span className="font-semibold text-emerald-600">{currentProject?.name}</span> ({currentProject?.code})
                         </p>
                     </div>
                 </div>
 
                 <div className="flex space-x-3">
                     <button
-                        onClick={() => handleUpdatePO("draft")}
+                        onClick={() => handleUpdateWC("draft")}
                         disabled={saving || success}
                         className="inline-flex items-center justify-center rounded-lg bg-white border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
                     >
@@ -246,12 +232,12 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
                         บันทึกฉบับร่าง
                     </button>
                     <button
-                        onClick={() => handleUpdatePO("pending")}
+                        onClick={() => handleUpdateWC("pending")}
                         disabled={saving || success}
-                        className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50 transition-colors"
+                        className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50 transition-colors"
                     >
                         {saving ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Send size={16} className="mr-2" />}
-                        {success ? "สำเร็จ!" : "ส่งขออนุมัติใหม่อีกครั้ง"}
+                        {success ? "สำเร็จ!" : "ส่งขออนุมัติอีกครั้ง"}
                     </button>
                 </div>
             </div>
@@ -261,60 +247,75 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">เลขที่ใบสั่งซื้อ (PO Number) <span className="text-red-500">*</span></label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">เลขที่ใบจ้างงาน <span className="text-red-500">*</span></label>
                             <input
                                 type="text"
-                                value={poNumber}
-                                onChange={(e) => setPoNumber(e.target.value)}
-                                className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                placeholder="PO-XXXXXX-XXX"
+                                value={wcNumber}
+                                onChange={(e) => setWcNumber(e.target.value)}
+                                className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">ผู้ขาย / คู่ค้า <span className="text-red-500">*</span></label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">ผู้รับจ้าง <span className="text-red-500">*</span></label>
                             <select
                                 value={vendorId}
                                 onChange={(e) => setVendorId(e.target.value)}
-                                className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
                             >
-                                <option value="">เลือกผู้ขาย...</option>
+                                <option value="">เลือกผู้รับจ้าง...</option>
                                 {vendors.map(v => (
                                     <option key={v.id} value={v.id}>{v.name}</option>
                                 ))}
                             </select>
                         </div>
 
-                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">หัวข้อ / ชื่องาน</label>
+                            <input
+                                type="text"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">วันที่สร้าง</label>
-                                <input type="text" disabled value={po.createdAt ? (po.createdAt as any).toDate().toLocaleDateString('th-TH') : 'ไม่ระบุ'} className="w-full border border-slate-200 bg-slate-50 rounded-lg py-2 px-3 text-sm text-slate-500 cursor-not-allowed" />
+                                <label className="block text-sm font-medium text-slate-700 mb-1">วันเริ่มงาน</label>
+                                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                                    className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm text-slate-600 focus:ring-emerald-500 focus:border-emerald-500" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">เครดิต (วัน)</label>
-                                <input
-                                    type="number"
-                                    value={creditDays}
-                                    onChange={(e) => setCreditDays(Number(e.target.value))}
-                                    className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm text-slate-600 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                    min="0"
-                                />
+                                <label className="block text-sm font-medium text-slate-700 mb-1">วันสิ้นสุดงาน</label>
+                                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                                    className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm text-slate-600 focus:ring-emerald-500 focus:border-emerald-500" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">เงื่อนไขการชำระเงิน</label>
+                                <input type="text" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)}
+                                    className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                                    placeholder="เช่น งวดที่ 1 = 50%" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">เลือกลายเซ็น</label>
                                 <select
                                     value={selectedSignatureId}
                                     onChange={(e) => setSelectedSignatureId(e.target.value)}
-                                    className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                    className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
                                 >
                                     <option value="">ไม่ระบุลายเซ็น</option>
                                     {companySettings?.signatures?.map((sig: any) => (
-                                        <option key={sig.id} value={sig.id}>
-                                            {sig.name} ({sig.position})
-                                        </option>
+                                        <option key={sig.id} value={sig.id}>{sig.name} ({sig.position})</option>
                                     ))}
                                 </select>
                             </div>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">หมายเหตุ</label>
+                            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)}
+                                className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                                placeholder="หมายเหตุ/ข้อกำหนดพิเศษ" />
                         </div>
                     </div>
 
@@ -322,7 +323,7 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
 
                     <div>
                         <div className="flex justify-between items-end mb-4">
-                            <h3 className="text-lg font-semibold text-slate-800">รายการสั่งซื้อ</h3>
+                            <h3 className="text-lg font-semibold text-slate-800">รายการงาน / ค่าแรง</h3>
                         </div>
 
                         <div className="border border-slate-200 rounded-lg overflow-hidden">
@@ -330,7 +331,7 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
                                 <thead className="bg-slate-50">
                                     <tr>
                                         <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">ลำดับ</th>
-                                        <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase w-2/5">รายละเอียด / รายการวัสดุ</th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase w-2/5">รายละเอียดงาน</th>
                                         <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">จำนวน</th>
                                         <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">หน่วย</th>
                                         <th scope="col" className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">ราคา/หน่วย</th>
@@ -343,49 +344,31 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
                                         <tr key={item.id} className="group">
                                             <td className="px-4 py-3 text-sm text-slate-400 font-medium">{index + 1}</td>
                                             <td className="px-4 py-3">
-                                                <input
-                                                    type="text"
-                                                    value={item.description}
+                                                <input type="text" value={item.description}
                                                     onChange={(e) => handleItemChange(item.id!, 'description', e.target.value)}
-                                                    placeholder="เช่น ปูนซีเมนต์ฉาบเรียบ 50กก."
-                                                    className="w-full text-sm p-1 border-0 bg-transparent focus:ring-0 p-0 text-slate-900 placeholder-slate-300"
-                                                />
+                                                    className="w-full text-sm border-0 bg-transparent focus:ring-0 text-slate-900 placeholder-slate-300" />
                                             </td>
                                             <td className="px-4 py-3">
-                                                <input
-                                                    type="number"
-                                                    value={item.quantity}
+                                                <input type="number" value={item.quantity}
                                                     onChange={(e) => handleItemChange(item.id!, 'quantity', Number(e.target.value))}
-                                                    className="w-20 text-sm border border-slate-200 rounded py-1 px-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                                />
+                                                    className="w-20 text-sm border border-slate-200 rounded py-1 px-2 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
                                             </td>
                                             <td className="px-4 py-3">
-                                                <input
-                                                    type="text"
-                                                    list="unit-list"
-                                                    value={item.unit}
+                                                <input type="text" list="unit-list" value={item.unit}
                                                     onChange={(e) => handleItemChange(item.id!, 'unit', e.target.value)}
-                                                    className="w-16 text-sm border border-slate-200 rounded py-1 px-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                                />
+                                                    className="w-16 text-sm border border-slate-200 rounded py-1 px-2 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
                                             </td>
                                             <td className="px-4 py-3 text-right">
-                                                <input
-                                                    type="number"
-                                                    value={item.unitPrice}
+                                                <input type="number" value={item.unitPrice}
                                                     onChange={(e) => handleItemChange(item.id!, 'unitPrice', Number(e.target.value))}
-                                                    className="w-24 text-sm text-right border border-slate-200 rounded py-1 px-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                                />
+                                                    className="w-24 text-sm text-right border border-slate-200 rounded py-1 px-2 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
                                             </td>
                                             <td className="px-4 py-3 text-right text-sm font-medium text-slate-900">
                                                 {item.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
                                             <td className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => removeItem(item.id!)}
-                                                    className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    ✕
-                                                </button>
+                                                <button onClick={() => removeItem(item.id!)}
+                                                    className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -397,11 +380,9 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
                                 </datalist>
                             )}
                             <div className="bg-slate-50 p-3 border-t border-slate-200">
-                                <button
-                                    onClick={handleAddItem}
-                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium px-2 py-1 flex items-center"
-                                >
-                                    <Plus size={16} className="mr-1" /> เพิ่มรายการ
+                                <button onClick={handleAddItem}
+                                    className="text-sm text-emerald-600 hover:text-emerald-800 font-medium px-2 py-1 flex items-center">
+                                    <Plus size={16} className="mr-1" /> เพิ่มรายการงาน
                                 </button>
                             </div>
                         </div>
@@ -416,11 +397,8 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
                             <div className="flex justify-between text-sm text-slate-600 items-center mt-2">
                                 <div className="flex items-center gap-2">
                                     <span>ภาษีมูลค่าเพิ่ม (VAT)</span>
-                                    <select
-                                        value={vatRate}
-                                        onChange={(e) => setVatRate(Number(e.target.value))}
-                                        className="text-sm border border-slate-300 rounded py-1 px-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                    >
+                                    <select value={vatRate} onChange={(e) => setVatRate(Number(e.target.value))}
+                                        className="text-sm border border-slate-300 rounded py-1 px-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white">
                                         <option value={7}>7%</option>
                                         <option value={0}>ไม่มี VAT (0%)</option>
                                     </select>
@@ -429,7 +407,7 @@ export default function EditPOPage({ params }: { params: Promise<{ id: string }>
                             </div>
                             <div className="flex justify-between text-base pt-3 border-t border-slate-200">
                                 <span className="font-bold text-slate-900">ยอดเงินสุทธิเต็มจำนวน (Total)</span>
-                                <span className="font-bold text-blue-700">฿ {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="font-bold text-emerald-700">฿ {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     </div>
