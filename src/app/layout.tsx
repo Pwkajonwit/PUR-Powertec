@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Powertec PUR",
-  description: "Powertec PUR",
+  title: "PUR-Powertec",
+  description: "สร้างเอกสารจ้างงาน PO",
 };
 
 export default function RootLayout({
@@ -35,4 +35,3 @@ export default function RootLayout({
     </html>
   );
 }
-

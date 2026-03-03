@@ -5,6 +5,14 @@ export interface POItem {
     unit: string;
     unitPrice: number;
     amount: number;
+    isClosed?: boolean;
+}
+
+export interface DocumentSignature {
+    id?: string;
+    name?: string;
+    position?: string;
+    signatureUrl?: string;
 }
 
 export interface PurchaseOrder {
@@ -25,5 +33,5 @@ export interface PurchaseOrder {
     updatedAt?: string;
     creditDays?: number;
     signatureId?: string;
-    signatureData?: any;
+    signatureData?: DocumentSignature | null;
 }
