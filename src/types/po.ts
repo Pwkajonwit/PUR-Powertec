@@ -34,4 +34,5 @@ export interface PurchaseOrder {
     creditDays?: number;
     signatureId?: string;
     signatureData?: DocumentSignature | null;
+    isCompleted?: boolean;
 }
