@@ -309,10 +309,12 @@ export default function LiffPODetailPage({ params }: { params: Promise<{ id: str
                             <span className="text-slate-600">ราคารวม</span>
                             <span className="font-medium text-slate-900">{formatMoney(itemsTotalBeforeFee)}</span>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600">ค่าดำเนินการ</span>
-                            <span className="font-medium text-slate-900">{formatMoney(processingFee)}</span>
-                        </div>
+                        {po.poType !== 'extra' && (
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600">ค่าดำเนินการ</span>
+                                <span className="font-medium text-slate-900">{formatMoney(processingFee)}</span>
+                            </div>
+                        )}
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-600">รวมเป็นเงิน</span>
                             <span className="font-medium text-slate-900">{formatMoney(po.subTotal)}</span>
