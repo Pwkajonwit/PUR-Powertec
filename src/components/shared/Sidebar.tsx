@@ -115,7 +115,7 @@ export default function Sidebar({ isOpen = false, setIsOpen }: SidebarProps) {
                 </div>
 
                 {/* Navigation */}
-                <div className="flex-1 overflow-y-auto py-6">
+                <div className="flex-1 overflow-y-auto py-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-600">
                     <nav className="px-3 space-y-1">
                         {mainNavigation.map((item) => {
                             const isActive = pathname.startsWith(item.href);

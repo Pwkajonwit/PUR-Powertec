@@ -161,7 +161,7 @@ export default function EditContractorPage({ params }: { params: Promise<{ id: s
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">id_contractor <span className="text-red-500">*</span></label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">รหัสคู่ค้า <span className="text-red-500">*</span></label>
                             <input type="text" name="idContractor" required value={formData.idContractor || ""} onChange={handleChange} className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white" />
                         </div>
                         <div>
@@ -179,7 +179,24 @@ export default function EditContractorPage({ params }: { params: Promise<{ id: s
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">ธนาคาร</label>
-                            <input type="text" name="bankCode" value={formData.bankCode || ""} onChange={handleChange} className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white" />
+                            <select name="bankCode" value={formData.bankCode || ""} onChange={handleChange} className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                <option value="" disabled>-- เลือกธนาคาร --</option>
+                                <option value="กรุงเทพ">กรุงเทพ</option>
+                                <option value="กสิกรไทย">กสิกรไทย</option>
+                                <option value="ไทยพาณิชย์">ไทยพาณิชย์</option>
+                                <option value="กรุงไทย">กรุงไทย</option>
+                                <option value="ทหารไทย">ทหารไทย</option>
+                                <option value="ออมสิน">ออมสิน</option>
+                                <option value="กรุงศรีอยุธยา">กรุงศรีอยุธยา</option>
+                                <option value="เกียรตินาคิน">เกียรตินาคิน</option>
+                                <option value="ธนชาต">ธนชาต</option>
+                                <option value="เพื่อการเกษตรและสหกรณ์การเกษตร">เพื่อการเกษตรและสหกรณ์การเกษตร</option>
+                                <option value="ยูโอบี">ยูโอบี</option>
+                                <option value="ซีไอเอ็มบีไทย">ซีไอเอ็มบีไทย</option>
+                                <option value="ทิสโก้">ทิสโก้</option>
+                                <option value="อาคารสงเคราะห์">อาคารสงเคราะห์</option>
+                                <option value="ธนาคารฮ่องกงและเซี่ยงไฮ้">ธนาคารฮ่องกงและเซี่ยงไฮ้</option>
+                            </select>
                         </div>
 
                         <div>
