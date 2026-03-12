@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, Loader2, User } from "lucide-react";
-import { addDoc, collection, getDocs } from "firebase/firestore";
+import { addDoc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Contractor } from "@/types/contractor";
 
 export default function CreateContractorPage() {
     const router = useRouter();
     const [saving, setSaving] = useState(false);
-    const [isLoadingId, setIsLoadingId] = useState(true);
 
     const [formData, setFormData] = useState<Partial<Contractor>>({
         idContractor: "",
@@ -25,40 +24,6 @@ export default function CreateContractorPage() {
         yearlyLimit: 1000000,
         isActive: true,
     });
-
-    useEffect(() => {
-        const generateContractorId = async () => {
-            try {
-                const querySnapshot = await getDocs(collection(db, "contractors"));
-                let maxId = 0;
-
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data() as Contractor;
-                    if (data.idContractor && data.idContractor.startsWith("CT")) {
-                        const numStr = data.idContractor.replace("CT", "");
-                        const num = parseInt(numStr, 10);
-                        if (!isNaN(num) && num > maxId) {
-                            maxId = num;
-                        }
-                    }
-                });
-
-                const nextId = maxId + 1;
-                const formattedId = `CT${nextId.toString().padStart(3, "0")}`;
-
-                setFormData((prev) => ({
-                    ...prev,
-                    idContractor: formattedId,
-                }));
-            } catch (error) {
-                console.error("Error generating contractor ID:", error);
-            } finally {
-                setIsLoadingId(false);
-            }
-        };
-
-        generateContractorId();
-    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -129,22 +94,8 @@ export default function CreateContractorPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">รหัสคู่ค้า <span className="text-red-500">*</span></label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    name="idContractor"
-                                    required
-                                    value={formData.idContractor || ""}
-                                    onChange={handleChange}
-                                    className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                />
-                                {isLoadingId && (
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                        <Loader2 size={16} className="text-blue-500 animate-spin" />
-                                    </div>
-                                )}
-                            </div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">id_contractor <span className="text-red-500">*</span></label>
+                            <input type="text" name="idContractor" required value={formData.idContractor || ""} onChange={handleChange} className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อเล่น</label>
@@ -161,24 +112,7 @@ export default function CreateContractorPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">ธนาคาร</label>
-                            <select name="bankCode" value={formData.bankCode || ""} onChange={handleChange} className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
-                                <option value="" disabled>-- เลือกธนาคาร --</option>
-                                <option value="กรุงเทพ">กรุงเทพ</option>
-                                <option value="กสิกรไทย">กสิกรไทย</option>
-                                <option value="ไทยพาณิชย์">ไทยพาณิชย์</option>
-                                <option value="กรุงไทย">กรุงไทย</option>
-                                <option value="ทหารไทย">ทหารไทย</option>
-                                <option value="ออมสิน">ออมสิน</option>
-                                <option value="กรุงศรีอยุธยา">กรุงศรีอยุธยา</option>
-                                <option value="เกียรตินาคิน">เกียรตินาคิน</option>
-                                <option value="ธนชาต">ธนชาต</option>
-                                <option value="เพื่อการเกษตรและสหกรณ์การเกษตร">เพื่อการเกษตรและสหกรณ์การเกษตร</option>
-                                <option value="ยูโอบี">ยูโอบี</option>
-                                <option value="ซีไอเอ็มบีไทย">ซีไอเอ็มบีไทย</option>
-                                <option value="ทิสโก้">ทิสโก้</option>
-                                <option value="อาคารสงเคราะห์">อาคารสงเคราะห์</option>
-                                <option value="ธนาคารฮ่องกงและเซี่ยงไฮ้">ธนาคารฮ่องกงและเซี่ยงไฮ้</option>
-                            </select>
+                            <input type="text" name="bankCode" value={formData.bankCode || ""} onChange={handleChange} placeholder="เช่น Ba102" className="w-full border border-slate-300 rounded-lg py-2 px-3 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white" />
                         </div>
 
                         <div>
