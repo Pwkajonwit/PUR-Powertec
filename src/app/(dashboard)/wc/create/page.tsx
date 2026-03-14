@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useProject } from "@/context/ProjectContext";
-import { ArrowLeft, Save, FileText, Send, Plus, Loader2, Search, ChevronDown, Upload } from "lucide-react";
+import { ArrowLeft, Save, FileText, Send, Plus, Loader2, Search, ChevronDown, Upload, Download } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, ChangeEvent } from "react";
 import { WCItem } from "@/types/wc";
@@ -10,7 +10,7 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, getDoc
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { Contractor } from "@/types/contractor";
-import { parseDocumentItemsCsv, PROCESSING_FEE_LABEL, FUEL_FEE_LABEL } from "@/lib/documentItems";
+import { parseDocumentItemsCsv, PROCESSING_FEE_LABEL, FUEL_FEE_LABEL, downloadDocumentItemsCsvTemplate } from "@/lib/documentItems";
 import { buildDocumentNumber, buildDocumentPrefix, normalizeProjectCode, parseDocumentSequence } from "@/lib/documentNumbers";
 
 type SignatureOption = {
@@ -267,6 +267,10 @@ export default function CreateWCPage() {
         };
 
         reader.readAsText(file, "utf-8");
+    };
+
+    const handleDownloadCsvSample = () => {
+        downloadDocumentItemsCsvTemplate("wc-items-sample.csv");
     };
 
     const normalizedProcessingFee = Math.max(0, Number(processingFee) || 0);
@@ -686,7 +690,6 @@ export default function CreateWCPage() {
                                     />
                                     <span className="font-semibold text-emerald-700">ปิดราคาทุกรายการ</span>
                                 </label>
-                                <p className="text-xs text-slate-500">รองรับ CSV: description, quantity, unit, unitPrice (มีหัวตารางหรือไม่มีก็ได้)</p>
                             </div>
                         </div>
 
@@ -827,6 +830,13 @@ export default function CreateWCPage() {
                                         <Upload size={16} className="mr-1" /> นำเข้า CSV
                                         <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportCsv} />
                                     </label>
+                                    <button
+                                        type="button"
+                                        onClick={handleDownloadCsvSample}
+                                        className="text-sm text-slate-600 hover:text-slate-900 font-medium px-2 py-1 flex items-center"
+                                    >
+                                        <Download size={16} className="mr-1" /> ตัวอย่าง CSV
+                                    </button>
                                 </div>
                                 <span className="text-xs text-slate-500">ระบบจะเขียนรายการท้ายเป็น {PROCESSING_FEE_LABEL} และ {FUEL_FEE_LABEL} อัตโนมัติเมื่อมีค่า</span>
                             </div>

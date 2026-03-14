@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useProject } from "@/context/ProjectContext";
-import { ArrowLeft, Save, FileText, Send, Plus, Loader2, Search, ChevronDown, Upload } from "lucide-react";
+import { ArrowLeft, Save, FileText, Send, Plus, Loader2, Search, ChevronDown, Upload, Download } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, ChangeEvent } from "react";
 import { POItem } from "@/types/po";
@@ -10,7 +10,7 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, getDoc
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { Vendor } from "@/types/vendor";
-import { parseDocumentItemsCsv } from "@/lib/documentItems";
+import { parseDocumentItemsCsv, downloadDocumentItemsCsvTemplate } from "@/lib/documentItems";
 import { buildDocumentNumber, buildDocumentPrefix, normalizeProjectCode, parseDocumentSequence } from "@/lib/documentNumbers";
 
 type SignatureOption = {
@@ -243,6 +243,10 @@ export default function CreatePOPage() {
         };
 
         reader.readAsText(file, "utf-8");
+    };
+
+    const handleDownloadCsvSample = () => {
+        downloadDocumentItemsCsvTemplate("po-items-sample.csv");
     };
 
     const itemsTotal = items.reduce((sum, item) => sum + (item.amount || 0), 0);
@@ -564,7 +568,6 @@ export default function CreatePOPage() {
                                     />
                                     <span className="font-semibold text-blue-700">ปิดราคาทุกรายการ</span>
                                 </label>
-                                <p className="text-xs text-slate-500 hidden md:block">รองรับ CSV: description, quantity, unit, unitPrice</p>
                             </div>
                         </div>
 
@@ -652,6 +655,13 @@ export default function CreatePOPage() {
                                         <Upload size={16} className="mr-1" /> นำเข้า CSV
                                         <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportCsv} />
                                     </label>
+                                    <button
+                                        type="button"
+                                        onClick={handleDownloadCsvSample}
+                                        className="text-sm text-slate-600 hover:text-slate-900 font-medium px-2 py-1 flex items-center"
+                                    >
+                                        <Download size={16} className="mr-1" /> ตัวอย่าง CSV
+                                    </button>
                                 </div>
                                 
                             </div>

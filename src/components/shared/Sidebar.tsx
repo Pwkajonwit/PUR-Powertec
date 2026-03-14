@@ -56,9 +56,9 @@ export default function Sidebar({ isOpen = false, setIsOpen }: SidebarProps) {
     const router = useRouter();
     const { userProfile, signOut } = useAuth();
     const documentSubmenuActive = documentNavigation.some((item) => pathname.startsWith(item.href));
-    const [isDocumentSubmenuOpen, setIsDocumentSubmenuOpen] = useState<boolean>(true);
+    const [isDocumentSubmenuOpen, setIsDocumentSubmenuOpen] = useState<boolean>(false);
     const submenuActive = peopleAndPartnersNavigation.some((item) => pathname.startsWith(item.href));
-    const [isSubmenuOpen, setIsSubmenuOpen] = useState<boolean>(true);
+    const [isSubmenuOpen, setIsSubmenuOpen] = useState<boolean>(false);
 
     const closeSidebar = () => {
         if (setIsOpen) setIsOpen(false);
