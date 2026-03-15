@@ -26,6 +26,13 @@ type NotifyBody = {
     projectName?: string;
 };
 
+type FooterAction = {
+    label: string;
+    uri: string;
+    style?: "primary" | "secondary";
+    color?: string;
+};
+
 const COLOR = {
     title: "#1e3a8a",
     text: "#334155",
@@ -182,21 +189,74 @@ function infoRow(
     };
 }
 
-function buildDocumentFooter(actionUrl: string, hasActionButton: boolean, actionLabel: string) {
-    if (!hasActionButton) return undefined;
+function sanitizePhoneUri(value: unknown): string | null {
+    const raw = asText(value, "");
+    if (!raw) return null;
+    const normalized = raw.replace(/\s+/g, "");
+    return normalized ? `tel:${normalized}` : null;
+}
+
+function sanitizeMapUri(value: unknown): string | null {
+    const raw = asText(value, "");
+    if (!raw) return null;
+    return /^https?:\/\//i.test(raw) ? raw : null;
+}
+
+function buildVendorFooterActions(vendorData?: NotifyRecord): FooterAction[] {
+    const actions: FooterAction[] = [];
+    const primaryPhoneUri = sanitizePhoneUri(vendorData?.phone);
+    const secondaryPhoneUri = sanitizePhoneUri(vendorData?.secondaryPhone);
+    const mapUri = sanitizeMapUri(vendorData?.googleMapUrl);
+
+    if (primaryPhoneUri) {
+        actions.push({
+            label: "โทรหลัก",
+            uri: primaryPhoneUri,
+            style: "secondary",
+        });
+    }
+
+    if (secondaryPhoneUri) {
+        actions.push({
+            label: "โทรสำรอง",
+            uri: secondaryPhoneUri,
+            style: "secondary",
+        });
+    }
+
+    if (mapUri) {
+        actions.push({
+            label: "แผนที่",
+            uri: mapUri,
+            style: "secondary",
+        });
+    }
+
+    return actions;
+}
+
+function buildDocumentFooter(actionUrl: string, hasActionButton: boolean, actionLabel: string, extraActions: FooterAction[] = []) {
+    if (!hasActionButton && extraActions.length === 0) return undefined;
 
     return {
         type: "box",
         layout: "vertical",
         spacing: "sm",
         contents: [
-            {
+            ...(hasActionButton ? [{
                 type: "button",
                 style: "primary",
                 color: COLOR.primary,
                 height: "sm",
                 action: { type: "uri", label: actionLabel, uri: actionUrl },
-            },
+            }] : []),
+            ...extraActions.map((item) => ({
+                type: "button",
+                style: item.style || "secondary",
+                ...(item.color ? { color: item.color } : {}),
+                height: "sm",
+                action: { type: "uri", label: item.label, uri: item.uri },
+            })),
         ],
     };
 }
@@ -210,6 +270,7 @@ function buildDocumentFlexBubble(params: {
     actionUrl: string;
     hasActionButton: boolean;
     actionLabel: string;
+    extraActions?: FooterAction[];
 }) {
     const {
         projectName,
@@ -220,6 +281,7 @@ function buildDocumentFlexBubble(params: {
         actionUrl,
         hasActionButton,
         actionLabel,
+        extraActions = [],
     } = params;
 
     return {
@@ -252,7 +314,7 @@ function buildDocumentFlexBubble(params: {
                 },
             ],
         },
-        footer: buildDocumentFooter(actionUrl, hasActionButton, actionLabel),
+        footer: buildDocumentFooter(actionUrl, hasActionButton, actionLabel, extraActions),
         styles: {
             body: { backgroundColor: "#ffffff" },
             footer: { backgroundColor: COLOR.surface, separator: true },
@@ -285,6 +347,7 @@ function buildPOFlex(params: {
         actionUrl: approveUrl,
         hasActionButton: hasApproveButton,
         actionLabel,
+        extraActions: buildVendorFooterActions(vendorData),
     });
 }
 
@@ -343,6 +406,7 @@ function buildWCFlex(params: {
         actionUrl: approveUrl,
         hasActionButton: hasApproveButton,
         actionLabel,
+        extraActions: buildVendorFooterActions(vendorData),
     });
 }
 
@@ -499,6 +563,35 @@ export async function POST(request: Request) {
             pushTarget(settings.userId, "legacyUserId");
         }
 
+        let resolvedProjectName = asText(projectName, "");
+        const sourceProjectId = asText(data?.projectId, "");
+        if (!resolvedProjectName && sourceProjectId) {
+            const projectSnapshot = await adminDb.collection("projects").doc(sourceProjectId).get();
+            if (projectSnapshot.exists) {
+                resolvedProjectName = asText(projectSnapshot.data()?.name, "");
+            }
+        }
+
+        let resolvedVendorData = vendorData;
+        const sourceVendorId = asText(data?.vendorId, "");
+        if ((type === "PO" || type === "WC") && sourceVendorId) {
+            const hasPhone = Boolean(asText(resolvedVendorData?.phone, ""));
+            const hasMap = Boolean(asText(resolvedVendorData?.googleMapUrl, ""));
+            const sourceCollection = type === "PO" ? "vendors" : "contractors";
+            const shouldHydrateVendor = !hasPhone || (type === "PO" && !hasMap);
+
+            if (shouldHydrateVendor) {
+                const sourceDoc = await adminDb.collection(sourceCollection).doc(sourceVendorId).get();
+                if (sourceDoc.exists) {
+                    resolvedVendorData = {
+                        id: sourceDoc.id,
+                        ...sourceDoc.data(),
+                        ...(resolvedVendorData || {}),
+                    };
+                }
+            }
+        }
+
         const normalizedKind = type ? resolveDocumentKind(type) : null;
         const documentStatus = asText(data?.status, "") || undefined;
         const isPending = normalizedKind ? isPendingDocumentStatus(normalizedKind, documentStatus) : documentStatus === "pending";
@@ -565,9 +658,9 @@ export async function POST(request: Request) {
             altText = isPending ? `PO รออนุมัติ - ${poNo}` : `PO อนุมัติแล้ว - ${poNo}`;
             flexContents = buildPOFlex({
                 isPending,
-                projectName,
+                projectName: resolvedProjectName,
                 data,
-                vendorData,
+                vendorData: resolvedVendorData,
                 approveUrl: actionUrl,
                 hasApproveButton: hasActionButton,
                 actionLabel,
@@ -577,7 +670,7 @@ export async function POST(request: Request) {
             altText = isPending ? `VO รออนุมัติ - ${voNo}` : `VO อนุมัติแล้ว - ${voNo}`;
             flexContents = buildVOFlex({
                 isPending,
-                projectName,
+                projectName: resolvedProjectName,
                 data,
                 approveUrl: actionUrl,
                 hasApproveButton: hasActionButton,
@@ -588,9 +681,9 @@ export async function POST(request: Request) {
             altText = isPending ? `WC รออนุมัติ - ${wcNo}` : `WC อนุมัติแล้ว - ${wcNo}`;
             flexContents = buildWCFlex({
                 isPending,
-                projectName,
+                projectName: resolvedProjectName,
                 data,
-                vendorData,
+                vendorData: resolvedVendorData,
                 approveUrl: actionUrl,
                 hasApproveButton: hasActionButton,
                 actionLabel,
@@ -600,7 +693,7 @@ export async function POST(request: Request) {
             altText = isPending ? `PR รออนุมัติ - ${prNo}` : `PR อนุมัติให้จัดหา - ${prNo}`;
             flexContents = buildPRFlex({
                 isPending,
-                projectName,
+                projectName: resolvedProjectName,
                 data,
                 approveUrl: actionUrl,
                 hasApproveButton: hasActionButton,
@@ -611,7 +704,7 @@ export async function POST(request: Request) {
             altText = isPending ? `PC รออนุมัติ - ${comparisonNo}` : `PC อนุมัติแล้ว - ${comparisonNo}`;
             flexContents = buildPCFlex({
                 isPending,
-                projectName,
+                projectName: resolvedProjectName,
                 data,
                 approveUrl: actionUrl,
                 hasApproveButton: hasActionButton,
@@ -625,7 +718,7 @@ export async function POST(request: Request) {
                     type: "box",
                     layout: "vertical",
                     contents: [
-                        { type: "text", text: asText(projectName, "ไม่ระบุโครงการ"), size: "sm", color: COLOR.title, weight: "bold", wrap: true },
+                        { type: "text", text: asText(resolvedProjectName, "ไม่ระบุโครงการ"), size: "sm", color: COLOR.title, weight: "bold", wrap: true },
                         { type: "separator", color: COLOR.border, margin: "md" },
                         infoRow("ประเภทเอกสาร", normalizedKind ? getNotifyDocumentLabel(normalizedKind) : asText(type, "ไม่ระบุ")),
                         infoRow("สถานะ", asText(data?.status, "-"), { valueColor: COLOR.title, valueWeight: "bold" }),
@@ -687,7 +780,7 @@ export async function POST(request: Request) {
                     const fallbackRes = await sendPushMessage(targetId, [
                         {
                             type: "text",
-                            text: buildPlainTextMessage({ type, projectName, data, vendorData }),
+                            text: buildPlainTextMessage({ type, projectName: resolvedProjectName, data, vendorData: resolvedVendorData }),
                         },
                     ]);
 
