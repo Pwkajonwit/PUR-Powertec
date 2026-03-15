@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, FileText, Loader2, Plus, Save, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Loader2, Plus, Save, Search, Send, Trash2 } from "lucide-react";
 import {
     addDoc,
     collection,
@@ -77,14 +77,14 @@ type SupplierOption = {
 type SaveIntent = "draft" | "pending_approval" | null;
 
 const fieldClassName =
-    "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none transition focus:border-slate-950";
+    "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-sans";
 
 const compactFieldClassName =
-    "w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-[13px] text-slate-900 outline-none transition focus:border-slate-950";
+    "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-sans";
 
 function FieldLabel({ children }: { children: string }) {
     return (
-        <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <label className="mb-1 block text-sm font-medium text-slate-700">
             {children}
         </label>
     );
@@ -94,23 +94,25 @@ function SectionCard({
     title,
     description,
     actions,
+    plain = false,
     children,
 }: {
     title: string;
     description?: string;
     actions?: ReactNode;
+    plain?: boolean;
     children: ReactNode;
 }) {
     return (
-        <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <section className={plain ? "space-y-4" : "overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm"}>
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                    <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
-                    {description ? <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p> : null}
+                    <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+                    {description ? <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p> : null}
                 </div>
                 {actions ? <div className="shrink-0">{actions}</div> : null}
             </div>
-            <div className="mt-4">{children}</div>
+            <div className={plain ? "" : "mt-6"}>{children}</div>
         </section>
     );
 }
@@ -125,9 +127,10 @@ function SummaryValue({
     className?: string;
 }) {
     return (
-        <div className={`rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 ${className}`}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
-            <div className="mt-1 text-sm font-semibold text-slate-950">{value}</div>
+        <div className={`flex flex-wrap items-start gap-x-2 gap-y-1 py-1 ${className}`}>
+            <span className="text-sm text-slate-500">{label}</span>
+            <span className="text-sm text-slate-400">:</span>
+            <div className="min-w-0 text-sm font-semibold text-slate-950">{value}</div>
         </div>
     );
 }
@@ -200,6 +203,8 @@ export default function PriceComparisonForm({
     const [saving, setSaving] = useState(false);
     const [saveIntent, setSaveIntent] = useState<SaveIntent>(null);
     const [success, setSuccess] = useState(false);
+    const [openSupplierDropdownId, setOpenSupplierDropdownId] = useState<string | null>(null);
+    const [supplierSearch, setSupplierSearch] = useState("");
 
     const supplierType = requisition ? getSupplierTypeFromPr(requisition) : "vendor";
     const rankedQuotes = rankPriceComparisonQuotes(quotes);
@@ -215,6 +220,14 @@ export default function PriceComparisonForm({
         recommendationType,
         selectedQuoteId: recommendedQuoteId || autoRecommendedQuote?.id,
         autoRecommendedQuoteId: autoRecommendedQuote?.id,
+    });
+    const filteredSuppliers = suppliers.filter((supplier) => {
+        const keyword = supplierSearch.trim().toLowerCase();
+        if (!keyword) return true;
+        return (
+            supplier.label.toLowerCase().includes(keyword) ||
+            (supplier.detail || "").toLowerCase().includes(keyword)
+        );
     });
 
     useEffect(() => {
@@ -384,6 +397,29 @@ export default function PriceComparisonForm({
     const handleRemoveQuote = (quoteId: string) => {
         setQuotes((current) => current.filter((quote) => quote.id !== quoteId));
         if (recommendedQuoteId === quoteId) setRecommendedQuoteId("");
+        if (openSupplierDropdownId === quoteId) {
+            setOpenSupplierDropdownId(null);
+            setSupplierSearch("");
+        }
+    };
+
+    const toggleSupplierDropdown = (quoteId: string) => {
+        setOpenSupplierDropdownId((current) => (current === quoteId ? null : quoteId));
+        setSupplierSearch("");
+    };
+
+    const handleSelectSupplier = (quoteId: string, supplierId: string) => {
+        handleQuoteChange(quoteId, "supplierId", supplierId);
+        setOpenSupplierDropdownId(null);
+        setSupplierSearch("");
+    };
+
+    const handleSelectRecommendedQuote = (quoteId: string) => {
+        setRecommendedQuoteId(quoteId);
+    };
+
+    const handleUseAutoRecommendation = () => {
+        setRecommendedQuoteId("");
     };
 
     const persistComparison = async (targetStatus: "draft" | "pending_approval") => {
@@ -547,66 +583,62 @@ export default function PriceComparisonForm({
     }
 
     return (
-        <div className="mx-auto max-w-7xl space-y-4">
-            <div className="rounded-lg border border-slate-300 bg-white px-4 py-3 print:hidden">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-3">
-                        <Link href={resolvedBackHref} className="rounded-md border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700">
+        <div className="mx-auto max-w-5xl space-y-6 font-sans">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between print:hidden">
+                <div className="flex items-start space-x-4">
+                    <Link href={resolvedBackHref} className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
                             <ArrowLeft size={20} />
                         </Link>
-                        <div>
-                            <h1 className="text-xl font-semibold tracking-tight text-slate-950">
+                        <div className="min-w-0">
+                            <h1 className="text-xl font-bold text-slate-900 md:text-2xl">
                                 {mode === "edit" ? "แก้ไขเอกสารเทียบราคา" : "สร้างเอกสารเทียบราคา"}
                             </h1>
-                            <p className="mt-0.5 text-xs text-slate-500">จัดทำเอกสารให้กระชับ อ่านง่าย และพร้อมเสนออนุมัติ</p>
+                            <p className="mt-1 text-sm text-slate-500">
+                                โครงการ: <span className="font-semibold text-indigo-600">{project?.name || "-"}</span>
+                                {requisition.prNumber ? ` • อ้างอิง ${requisition.prNumber}` : ""}
+                            </p>
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                        <button type="button" disabled={saving || success} onClick={() => void persistComparison("draft")} className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <button type="button" disabled={saving || success} onClick={() => void persistComparison("draft")} className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50">
                             {saving && saveIntent === "draft" ? <Loader2 size={15} className="mr-2 animate-spin" /> : <Save size={15} className="mr-2" />}
                             {success && saveIntent === "draft" ? "บันทึกร่างแล้ว" : "บันทึกร่าง"}
                         </button>
-                        <button type="button" disabled={saving || success} onClick={() => void persistComparison("pending_approval")} className="inline-flex items-center justify-center rounded-md bg-slate-950 px-3 py-2 text-[13px] font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">
+                        <button type="button" disabled={saving || success} onClick={() => void persistComparison("pending_approval")} className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:opacity-50">
                             {saving && saveIntent === "pending_approval" ? <Loader2 size={15} className="mr-2 animate-spin" /> : <Send size={15} className="mr-2" />}
                             {success && saveIntent === "pending_approval" ? "ส่งอนุมัติแล้ว" : "ส่งขออนุมัติ"}
                         </button>
                     </div>
                 </div>
-            </div>
 
-            <SectionCard title="ข้อมูลอ้างอิง" description={`PR ${requisition.prNumber || "-"} • ${project?.name || "-"}`}>
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),20rem]">
-                    <div className="space-y-3">
-                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                            <div className="sm:col-span-2">
-                                <FieldLabel>เลขที่เอกสาร</FieldLabel>
-                                <input value={comparisonNumber} onChange={(event) => setComparisonNumber(event.target.value)} className={fieldClassName} />
-                            </div>
-                            <SummaryValue label="ประเภทคำขอ" value={getRequestTypeLabel(requisition.requestType)} />
-                            <SummaryValue label="เอกสารปลายทาง" value={getFulfillmentTypeLabel(requisition.fulfillmentType)} />
-                        </div>
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">หัวข้อคำขอ</p>
-                            <p className="mt-1 text-sm font-semibold text-slate-950">{requisition.title}</p>
-                            {requisition.reason ? <p className="mt-2 text-sm leading-6 text-slate-600">{requisition.reason}</p> : null}
-                        </div>
+            <SectionCard plain title="ข้อมูลอ้างอิง" description={`PR ${requisition.prNumber || "-"} • ${project?.name || "-"}`}>
+                <div className="space-y-2">
+                    <div className="max-w-xl">
+                        <FieldLabel>เลขที่เอกสาร</FieldLabel>
+                        <input value={comparisonNumber} onChange={(event) => setComparisonNumber(event.target.value)} className={fieldClassName} />
                     </div>
-
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                    <div className="grid gap-x-8 gap-y-1 md:grid-cols-2">
+                        <SummaryValue label="ประเภทคำขอ" value={getRequestTypeLabel(requisition.requestType)} />
+                        <SummaryValue label="เอกสารปลายทาง" value={getFulfillmentTypeLabel(requisition.fulfillmentType)} />
                         <SummaryValue label="ผู้ขอ" value={requisition.requestedByName || requisition.createdBy || "-"} />
                         <SummaryValue label="งบประมาณอ้างอิง" value={formatMoney(Number(requisition.totalAmount || 0))} />
                         <SummaryValue label="วันที่ต้องการใช้งาน" value={requisition.requiredDate || "-"} />
                         <SummaryValue label="จำนวนรายการอ้างอิง" value={`${requisition.items.length} รายการ`} />
                     </div>
+                    <div className="space-y-1 pt-1">
+                        <SummaryValue label="หัวข้อคำขอ" value={requisition.title} />
+                        {requisition.reason ? <SummaryValue label="รายละเอียด" value={requisition.reason} /> : null}
+                    </div>
                 </div>
             </SectionCard>
 
             <SectionCard
+                plain
                 title="สรุปผู้เสนอราคา"
                 description="แสดงเฉพาะข้อมูลหลักเพื่อเปรียบเทียบและคัดเลือก"
                 actions={(
-                    <button type="button" onClick={handleAddQuote} className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-slate-950 px-3 py-2 text-[13px] font-semibold text-white transition hover:bg-slate-800">
+                    <button type="button" onClick={handleAddQuote} className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50">
                         <Plus size={16} className="mr-2" />
                         เพิ่มผู้เสนอราคา
                     </button>
@@ -622,19 +654,32 @@ export default function PriceComparisonForm({
                             const isSelected = selectedQuoteId === quote.id;
 
                             return (
-                                <div key={quote.id} className={`rounded-lg border px-4 py-3 ${isSelected ? "border-slate-900 bg-slate-50" : "border-slate-200 bg-white"}`}>
+                                <div key={quote.id} className={`rounded-xl border px-4 py-3 shadow-sm ${isSelected ? "border-indigo-200 bg-indigo-50/50" : "border-slate-200 bg-white"}`}>
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <p className="text-sm font-semibold text-slate-950">{quote.supplierName || "ยังไม่ได้ระบุผู้เสนอราคา"}</p>
                                             <p className="mt-1 text-xs text-slate-500">Rank {quote.overallRank || "-"} • {quote.quoteRef || "ไม่มีเลขอ้างอิง"}</p>
                                         </div>
-                                        {isSelected ? <span className="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white">เลือก</span> : null}
+                                        {isSelected ? <span className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-700">เลือก</span> : null}
                                     </div>
-                                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                    <div className="mt-3">
                                         <SummaryValue label="ยอดรวม" value={formatMoney(Number(quote.totalAmount || 0))} />
                                         <SummaryValue label="VAT" value={getVatModeLabel(quote.vatMode)} />
                                         <SummaryValue label="เครดิต" value={`${quote.creditDays || 0} วัน`} />
                                         <SummaryValue label="ส่งมอบ" value={`${quote.deliveryDays || 0} วัน`} />
+                                    </div>
+                                    <div className="mt-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSelectRecommendedQuote(quote.id)}
+                                            className={`inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                                                isSelected
+                                                    ? "border border-indigo-200 bg-white text-indigo-700"
+                                                    : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            {isSelected ? "ผู้เสนอที่เลือกอยู่" : "เลือกผู้เสนอนี้"}
+                                        </button>
                                     </div>
                                 </div>
                             );
@@ -649,86 +694,174 @@ export default function PriceComparisonForm({
                         const isSelected = selectedQuoteId === quote.id;
 
                         return (
-                            <article key={quote.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                            <article key={quote.id} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                                 <div className="flex flex-col gap-3 border-b border-slate-200 pb-3 lg:flex-row lg:items-start lg:justify-between">
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="rounded-md border border-slate-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                                     <div>
+                                         <div className="flex flex-wrap items-center gap-2">
+                                            <span className="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
                                                 ผู้เสนอราคา #{index + 1}
                                             </span>
-                                            <span className="rounded-md border border-slate-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                                            <span className="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
                                                 Rank {quote.overallRank || "-"}
                                             </span>
-                                            {isSelected ? (
-                                                <span className="rounded-md bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white">
-                                                    ผู้เสนอที่เลือก
-                                                </span>
-                                            ) : null}
-                                        </div>
-                                        <p className="mt-2 text-sm font-semibold text-slate-950">{quote.supplierName || "ยังไม่ได้ระบุผู้เสนอราคา"}</p>
-                                    </div>
-                                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-right">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">ยอดรวมเสนอราคา</p>
-                                        <p className="mt-1 text-base font-semibold text-slate-950">{formatMoney(Number(quote.totalAmount || 0))}</p>
-                                    </div>
-                                </div>
+                                             {isSelected ? (
+                                                 <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-700">
+                                                     ผู้เสนอที่เลือก
+                                                 </span>
+                                             ) : null}
+                                         </div>
+                                         <p className="mt-2 text-sm font-semibold text-slate-950">{quote.supplierName || "ยังไม่ได้ระบุผู้เสนอราคา"}</p>
+                                     </div>
+                                     <div className="flex items-start gap-3">
+                                         <button
+                                             type="button"
+                                             onClick={() => handleSelectRecommendedQuote(quote.id)}
+                                             className={`inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                                                 isSelected
+                                                     ? "border border-indigo-200 bg-indigo-50 text-indigo-700"
+                                                     : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                                             }`}
+                                         >
+                                             {isSelected ? "เลือกอยู่" : "เลือกผู้เสนอนี้"}
+                                         </button>
+                                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-right">
+                                             <p className="text-xs font-medium text-slate-500">ยอดรวมเสนอราคา</p>
+                                             <p className="mt-1 text-base font-semibold text-slate-950">{formatMoney(Number(quote.totalAmount || 0))}</p>
+                                         </div>
+                                     </div>
+                                 </div>
 
-                                <div className="mt-4 space-y-3">
-                                    <div className="grid gap-3 xl:grid-cols-[minmax(0,2.2fr),1fr,1fr,1fr,1fr]">
+                                <div className="mt-4 space-y-4">
+                                    <div className="space-y-3">
                                         <div>
                                             <FieldLabel>{supplierType === "vendor" ? "ผู้ขาย / คู่ค้า" : "ผู้รับจ้าง"}</FieldLabel>
-                                            <select value={quote.supplierId} onChange={(event) => handleQuoteChange(quote.id, "supplierId", event.target.value)} className={fieldClassName}>
-                                                <option value="">เลือกผู้เสนอราคา</option>
-                                                {suppliers.map((supplier) => (
-                                                    <option key={supplier.id} value={supplier.id}>{supplier.label}{supplier.detail ? ` (${supplier.detail})` : ""}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div><FieldLabel>วันที่เสนอราคา</FieldLabel><input type="date" value={quote.quotedAt || ""} onChange={(event) => handleQuoteChange(quote.id, "quotedAt", event.target.value)} className={fieldClassName} /></div>
-                                        <div><FieldLabel>เลขอ้างอิง</FieldLabel><input value={quote.quoteRef || ""} onChange={(event) => handleQuoteChange(quote.id, "quoteRef", event.target.value)} className={fieldClassName} /></div>
-                                        <div><FieldLabel>เครดิต (วัน)</FieldLabel><input type="number" min="0" value={quote.creditDays || 0} onChange={(event) => handleQuoteChange(quote.id, "creditDays", Number(event.target.value))} className={fieldClassName} /></div>
-                                        <div><FieldLabel>ส่งมอบ (วัน)</FieldLabel><input type="number" min="0" value={quote.deliveryDays || 0} onChange={(event) => handleQuoteChange(quote.id, "deliveryDays", Number(event.target.value))} className={fieldClassName} /></div>
-                                    </div>
+                                            <div className="relative">
+                                                <div
+                                                    className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm transition-colors hover:border-indigo-400"
+                                                    onClick={() => toggleSupplierDropdown(quote.id)}
+                                                >
+                                                    <span className={quote.supplierId ? "truncate text-slate-900" : "text-slate-400"}>
+                                                        {quote.supplierName || "ค้นหาและเลือกผู้เสนอราคา..."}
+                                                    </span>
+                                                    <ChevronDown
+                                                        size={16}
+                                                        className={`ml-2 shrink-0 text-slate-400 transition-transform duration-200 ${openSupplierDropdownId === quote.id ? "rotate-180" : ""}`}
+                                                    />
+                                                </div>
 
-                                    <div className="grid gap-3 xl:grid-cols-[14rem,minmax(0,1fr)]">
-                                        <div>
-                                            <FieldLabel>VAT</FieldLabel>
-                                            <select value={quote.vatMode || "exclusive"} onChange={(event) => handleQuoteChange(quote.id, "vatMode", event.target.value)} className={fieldClassName}>
-                                                <option value="none">ไม่มี VAT</option>
-                                                <option value="exclusive">VAT 7% แยกจากราคา</option>
-                                                <option value="inclusive">VAT 7% รวมในราคา</option>
-                                            </select>
+                                                {openSupplierDropdownId === quote.id ? (
+                                                    <>
+                                                        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+                                                            <div className="border-b border-slate-100 bg-slate-50 p-2">
+                                                                <div className="relative">
+                                                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder={supplierType === "vendor" ? "พิมพ์ค้นหาชื่อ หรือเลขผู้เสียภาษี..." : "พิมพ์ค้นหาชื่อ หรือเบอร์โทร..."}
+                                                                        className="w-full rounded-md border border-slate-200 bg-white py-2 pl-8 pr-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                                        value={supplierSearch}
+                                                                        onChange={(event) => setSupplierSearch(event.target.value)}
+                                                                        autoFocus
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div className="max-h-64 overflow-y-auto">
+                                                                {filteredSuppliers.length > 0 ? (
+                                                                    filteredSuppliers.map((supplier) => (
+                                                                        <div
+                                                                            key={supplier.id}
+                                                                            className={`cursor-pointer border-b border-slate-50 px-3 py-2.5 text-sm transition-colors last:border-0 hover:bg-indigo-50 ${quote.supplierId === supplier.id ? "bg-indigo-50 font-semibold text-indigo-700" : "text-slate-700"}`}
+                                                                            onClick={() => handleSelectSupplier(quote.id, supplier.id)}
+                                                                        >
+                                                                            <div>{supplier.label}</div>
+                                                                            {supplier.detail ? <div className="mt-0.5 text-xs font-normal text-slate-500">{supplier.detail}</div> : null}
+                                                                        </div>
+                                                                    ))
+                                                                ) : (
+                                                                    <div className="px-3 py-6 text-center text-sm text-slate-500">
+                                                                        ไม่พบรายชื่อ{supplierType === "vendor" ? "ผู้ขาย" : "ผู้รับจ้าง"}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div
+                                                            className="fixed inset-0 z-40"
+                                                            onClick={() => {
+                                                                setOpenSupplierDropdownId(null);
+                                                                setSupplierSearch("");
+                                                            }}
+                                                        />
+                                                    </>
+                                                ) : null}
+                                            </div>
                                         </div>
+
+                                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                            <div>
+                                                <FieldLabel>วันที่เสนอราคา</FieldLabel>
+                                                <input type="date" value={quote.quotedAt || ""} onChange={(event) => handleQuoteChange(quote.id, "quotedAt", event.target.value)} className={fieldClassName} />
+                                            </div>
+                                            <div className="xl:col-span-2">
+                                                <FieldLabel>เลขอ้างอิง</FieldLabel>
+                                                <input value={quote.quoteRef || ""} onChange={(event) => handleQuoteChange(quote.id, "quoteRef", event.target.value)} className={fieldClassName} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>ส่งมอบ (วัน)</FieldLabel>
+                                                <input type="number" min="0" value={quote.deliveryDays || 0} onChange={(event) => handleQuoteChange(quote.id, "deliveryDays", Number(event.target.value))} className={fieldClassName} />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div>
+                                                <FieldLabel>เครดิต (วัน)</FieldLabel>
+                                                <input type="number" min="0" value={quote.creditDays || 0} onChange={(event) => handleQuoteChange(quote.id, "creditDays", Number(event.target.value))} className={fieldClassName} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>VAT</FieldLabel>
+                                                <select value={quote.vatMode || "exclusive"} onChange={(event) => handleQuoteChange(quote.id, "vatMode", event.target.value)} className={fieldClassName}>
+                                                    <option value="none">ไม่มี VAT</option>
+                                                    <option value="exclusive">VAT 7% แยกจากราคา</option>
+                                                    <option value="inclusive">VAT 7% รวมในราคา</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
                                         <div>
                                             <FieldLabel>หมายเหตุผู้เสนอราคา</FieldLabel>
-                                            <textarea rows={2} value={quote.note || ""} onChange={(event) => handleQuoteChange(quote.id, "note", event.target.value)} className={fieldClassName} placeholder="เงื่อนไขเพิ่มเติมหรือข้อสังเกต" />
+                                            <textarea rows={6} value={quote.note || ""} onChange={(event) => handleQuoteChange(quote.id, "note", event.target.value)} className={fieldClassName} placeholder="เงื่อนไขเพิ่มเติมหรือข้อสังเกต" />
                                         </div>
                                     </div>
 
-                                    <QuoteItemsTable
-                                        items={quote.items}
-                                        editable
-                                        renderUnitPrice={(item) => (
-                                            <input type="number" min="0" value={item.unitPrice} onChange={(event) => handleItemChange(quote.id, item.id, "unitPrice", Number(event.target.value))} className="w-28 rounded-md border border-slate-300 px-2.5 py-1.5 text-right text-[13px] text-slate-900 outline-none focus:border-slate-950" />
-                                        )}
-                                        renderRemark={(item) => (
-                                            <input value={item.remark || ""} onChange={(event) => handleItemChange(quote.id, item.id, "remark", event.target.value)} className={compactFieldClassName} placeholder="หมายเหตุ" />
-                                        )}
-                                        renderCompliance={(item) => (
-                                            <label className="inline-flex items-center justify-center gap-2">
-                                                <input type="checkbox" checked={item.isCompliant !== false} onChange={(event) => handleItemChange(quote.id, item.id, "isCompliant", event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-950" />
-                                                <span className="text-sm text-slate-600">{item.isCompliant === false ? "ไม่ผ่าน" : "ผ่าน"}</span>
-                                            </label>
-                                        )}
-                                    />
+                                    <div className="space-y-3">
+                                        <QuoteItemsTable
+                                            items={quote.items}
+                                            editable
+                                            renderUnitPrice={(item) => (
+                                                <input type="number" min="0" value={item.unitPrice} onChange={(event) => handleItemChange(quote.id, item.id, "unitPrice", Number(event.target.value))} className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-right text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
+                                            )}
+                                            renderRemark={(item) => (
+                                                <input value={item.remark || ""} onChange={(event) => handleItemChange(quote.id, item.id, "remark", event.target.value)} className={compactFieldClassName} placeholder="หมายเหตุ" />
+                                            )}
+                                            renderCompliance={(item) => (
+                                                <label className="inline-flex items-center justify-center gap-2">
+                                                    <input type="checkbox" checked={item.isCompliant !== false} onChange={(event) => handleItemChange(quote.id, item.id, "isCompliant", event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-950" />
+                                                    <span className="text-sm text-slate-600">{item.isCompliant === false ? "ไม่ผ่าน" : "ผ่าน"}</span>
+                                                </label>
+                                            )}
+                                        />
 
-                                    <QuoteTotalsGrid quote={quote} />
+                                        <div className="flex flex-col gap-3">
+                                            <div className="w-full">
+                                                <QuoteTotalsGrid quote={quote} />
+                                            </div>
 
-                                    <div className="flex justify-end">
-                                        <button type="button" onClick={() => handleRemoveQuote(quote.id)} disabled={rankedQuotes.length <= 1} className="inline-flex items-center justify-center rounded-md border border-rose-200 bg-white px-3 py-2 text-[13px] font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50">
-                                            <Trash2 size={16} className="mr-2" />
-                                            ลบผู้เสนอราคารายนี้
-                                        </button>
+                                            <div className="flex justify-start">
+                                                <button type="button" onClick={() => handleRemoveQuote(quote.id)} disabled={rankedQuotes.length <= 1} className="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition-colors hover:bg-rose-50 disabled:opacity-50">
+                                                    <Trash2 size={16} className="mr-2" />
+                                                    ลบผู้เสนอราคารายนี้
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </article>
@@ -737,49 +870,56 @@ export default function PriceComparisonForm({
                 </div>
             </SectionCard>
 
-            <SectionCard title="ข้อเสนอเพื่ออนุมัติ">
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr),20rem]">
-                        <div className="space-y-3">
-                            <div className="grid gap-3 md:grid-cols-2">
-                                <div>
-                                    <FieldLabel>เกณฑ์การตัดสิน</FieldLabel>
-                                    <select value={recommendationType} onChange={(event) => setRecommendationType(event.target.value as ComparisonRecommendationType)} className={fieldClassName}>
-                                        <option value="lowest_price">ราคาต่ำสุด</option>
-                                        <option value="best_value">ความคุ้มค่าที่เหมาะสม</option>
-                                        <option value="technical_fit">ความเหมาะสมทางเทคนิค</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <FieldLabel>ผู้เสนอที่ต้องการเสนออนุมัติ</FieldLabel>
-                                    <select value={recommendedQuoteId} onChange={(event) => setRecommendedQuoteId(event.target.value)} className={fieldClassName}>
-                                        <option value="">ใช้คำแนะนำอัตโนมัติ</option>
-                                        {matrixQuotes.map((quote) => (
-                                            <option key={quote.id} value={quote.id}>Rank {quote.overallRank || "-"} • {quote.supplierName || "ยังไม่ได้ระบุชื่อ"}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <FieldLabel>เหตุผลประกอบการเลือก</FieldLabel>
-                                <textarea value={recommendationReason} onChange={(event) => setRecommendationReason(event.target.value)} rows={4} className={fieldClassName} placeholder="เช่น เครดิตดีกว่า ส่งมอบเร็วกว่า หรือมีความเหมาะสมทางเทคนิคมากกว่า" />
-                            </div>
-
-                            {needsRecommendationReason ? (
-                                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] text-amber-900">
-                                    หากเลือกไม่ตรงกับระบบแนะนำหรือใช้เกณฑ์อื่นนอกเหนือจากราคาต่ำสุด ควรระบุเหตุผลให้ชัดเจนเพื่อประกอบการอนุมัติ
-                                </div>
-                            ) : null}
+            <SectionCard plain title="ข้อเสนอเพื่ออนุมัติ">
+                <div className="space-y-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                        <div>
+                            <FieldLabel>เกณฑ์การตัดสิน</FieldLabel>
+                            <select value={recommendationType} onChange={(event) => setRecommendationType(event.target.value as ComparisonRecommendationType)} className={fieldClassName}>
+                                <option value="lowest_price">ราคาต่ำสุด</option>
+                                <option value="best_value">ความคุ้มค่าที่เหมาะสม</option>
+                                <option value="technical_fit">ความเหมาะสมทางเทคนิค</option>
+                            </select>
                         </div>
-
-                        <div className="space-y-2">
-                            <SummaryValue label="คำแนะนำอัตโนมัติ" value={autoRecommendedQuote?.supplierName || "-"} />
-                            <SummaryValue label="ยอดตามคำแนะนำ" value={autoRecommendedQuote ? `${formatMoney(Number(autoRecommendedQuote.totalAmount || 0))} • Rank ${autoRecommendedQuote.overallRank || "-"}` : "ระบบยังไม่สามารถจัดอันดับได้"} />
-                            <SummaryValue label="ผลที่เสนออนุมัติ" value={selectedQuotePreview?.supplierName || "ยังไม่ได้เลือก"} />
-                            <SummaryValue label="ยอดที่เสนออนุมัติ" value={selectedQuotePreview ? `${formatMoney(Number(selectedQuotePreview.totalAmount || 0))} • ${getVatModeLabel(selectedQuotePreview.vatMode)}` : "เลือกผู้เสนอราคาเพื่อเตรียมเสนออนุมัติ"} />
-                            <SummaryValue label="เกณฑ์และรูปแบบ" value={`${getRecommendationTypeLabel(recommendationType)} • ${getFulfillmentTypeLabel(requisition.fulfillmentType)}`} />
+                        <div>
+                            <FieldLabel>ผู้เสนอที่ต้องการเสนออนุมัติ</FieldLabel>
+                            <select value={recommendedQuoteId} onChange={(event) => setRecommendedQuoteId(event.target.value)} className={fieldClassName}>
+                                <option value="">ใช้คำแนะนำอัตโนมัติ</option>
+                                {matrixQuotes.map((quote) => (
+                                    <option key={quote.id} value={quote.id}>Rank {quote.overallRank || "-"} • {quote.supplierName || "ยังไม่ได้ระบุชื่อ"}</option>
+                                ))}
+                            </select>
+                            <div className="mt-2 flex justify-start">
+                                <button
+                                    type="button"
+                                    onClick={handleUseAutoRecommendation}
+                                    className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                                >
+                                    ใช้คำแนะนำอัตโนมัติ
+                                </button>
+                            </div>
                         </div>
                     </div>
+
+                    <div>
+                        <FieldLabel>เหตุผลประกอบการเลือก</FieldLabel>
+                        <textarea value={recommendationReason} onChange={(event) => setRecommendationReason(event.target.value)} rows={4} className={fieldClassName} placeholder="เช่น เครดิตดีกว่า ส่งมอบเร็วกว่า หรือมีความเหมาะสมทางเทคนิคมากกว่า" />
+                    </div>
+
+                    {needsRecommendationReason ? (
+                        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] text-amber-900">
+                            หากเลือกไม่ตรงกับระบบแนะนำหรือใช้เกณฑ์อื่นนอกเหนือจากราคาต่ำสุด ควรระบุเหตุผลให้ชัดเจนเพื่อประกอบการอนุมัติ
+                        </div>
+                    ) : null}
+
+                    <div>
+                        <SummaryValue label="คำแนะนำอัตโนมัติ" value={autoRecommendedQuote?.supplierName || "-"} />
+                        <SummaryValue label="ยอดตามคำแนะนำ" value={autoRecommendedQuote ? `${formatMoney(Number(autoRecommendedQuote.totalAmount || 0))} • Rank ${autoRecommendedQuote.overallRank || "-"}` : "ระบบยังไม่สามารถจัดอันดับได้"} />
+                        <SummaryValue label="ผลที่เสนออนุมัติ" value={selectedQuotePreview?.supplierName || "ยังไม่ได้เลือก"} />
+                        <SummaryValue label="ยอดที่เสนออนุมัติ" value={selectedQuotePreview ? `${formatMoney(Number(selectedQuotePreview.totalAmount || 0))} • ${getVatModeLabel(selectedQuotePreview.vatMode)}` : "เลือกผู้เสนอราคาเพื่อเตรียมเสนออนุมัติ"} />
+                        <SummaryValue label="เกณฑ์และรูปแบบ" value={`${getRecommendationTypeLabel(recommendationType)} • ${getFulfillmentTypeLabel(requisition.fulfillmentType)}`} />
+                    </div>
+                </div>
             </SectionCard>
         </div>
     );
