@@ -182,46 +182,22 @@ function infoRow(
     };
 }
 
-function buildDocumentFooter(params: {
-    actionUrl: string;
-    hasActionButton: boolean;
-    actionLabel: string;
-    secondaryButtons?: Array<{ label: string; uri: string }>;
-}) {
-    const { actionUrl, hasActionButton, actionLabel, secondaryButtons } = params;
-    const contents: unknown[] = [];
-
-    if (hasActionButton) {
-        contents.push({
-            type: "button",
-            style: "primary",
-            color: COLOR.primary,
-            height: "sm",
-            action: { type: "uri", label: actionLabel, uri: actionUrl },
-        });
-    }
-
-    if (secondaryButtons && secondaryButtons.length > 0) {
-        contents.push({
-            type: "box",
-            layout: "horizontal",
-            spacing: "sm",
-            contents: secondaryButtons.map((button) => ({
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                action: { type: "uri", label: button.label, uri: button.uri },
-            })),
-        });
-    }
-
-    if (contents.length === 0) return undefined;
+function buildDocumentFooter(actionUrl: string, hasActionButton: boolean, actionLabel: string) {
+    if (!hasActionButton) return undefined;
 
     return {
         type: "box",
         layout: "vertical",
         spacing: "sm",
-        contents,
+        contents: [
+            {
+                type: "button",
+                style: "primary",
+                color: COLOR.primary,
+                height: "sm",
+                action: { type: "uri", label: actionLabel, uri: actionUrl },
+            },
+        ],
     };
 }
 
@@ -234,7 +210,6 @@ function buildDocumentFlexBubble(params: {
     actionUrl: string;
     hasActionButton: boolean;
     actionLabel: string;
-    secondaryButtons?: Array<{ label: string; uri: string }>;
 }) {
     const {
         projectName,
@@ -245,7 +220,6 @@ function buildDocumentFlexBubble(params: {
         actionUrl,
         hasActionButton,
         actionLabel,
-        secondaryButtons,
     } = params;
 
     return {
@@ -278,7 +252,7 @@ function buildDocumentFlexBubble(params: {
                 },
             ],
         },
-        footer: buildDocumentFooter({ actionUrl, hasActionButton, actionLabel, secondaryButtons }),
+        footer: buildDocumentFooter(actionUrl, hasActionButton, actionLabel),
         styles: {
             body: { backgroundColor: "#ffffff" },
             footer: { backgroundColor: COLOR.surface, separator: true },
@@ -296,20 +270,6 @@ function buildPOFlex(params: {
     actionLabel: string;
 }) {
     const { isPending, projectName, data, vendorData, approveUrl, hasApproveButton, actionLabel } = params;
-    const secondaryButtons: Array<{ label: string; uri: string }> = [];
-    const primaryPhone = asText(vendorData?.phone, "");
-    const secondaryPhone = asText(vendorData?.secondaryPhone, "");
-    const googleMapUrl = asText(vendorData?.googleMapUrl, "");
-
-    if (primaryPhone) {
-        secondaryButtons.push({ label: "โทรหลัก", uri: `tel:${primaryPhone}` });
-    }
-    if (secondaryPhone) {
-        secondaryButtons.push({ label: "โทรสำรอง", uri: `tel:${secondaryPhone}` });
-    }
-    if (googleMapUrl) {
-        secondaryButtons.push({ label: "แผนที่", uri: googleMapUrl });
-    }
 
     return buildDocumentFlexBubble({
         projectName,
@@ -325,7 +285,6 @@ function buildPOFlex(params: {
         actionUrl: approveUrl,
         hasActionButton: hasApproveButton,
         actionLabel,
-        secondaryButtons,
     });
 }
 
