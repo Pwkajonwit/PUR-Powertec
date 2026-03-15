@@ -294,7 +294,7 @@ export default function PriceComparisonDetailPage({ params }: { params: Promise<
     const recommendedQuoteId = comparison.recommendedQuoteId || comparison.autoRecommendedQuoteId || "";
 
     return (
-        <div className="mx-auto max-w-7xl space-y-5">
+        <div className="mx-auto max-w-5xl space-y-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-4">
                     <Link href="/price-comparisons" className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
