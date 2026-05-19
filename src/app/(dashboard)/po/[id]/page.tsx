@@ -174,6 +174,7 @@ export default function PODetailPage({ params }: { params: Promise<{ id: string 
     const { items: displayItems } = splitProcessingFeeItem(po.items);
     const minDisplayRows = 10;
     const emptyRowCount = Math.max(0, minDisplayRows - displayItems.length);
+    const firstPrintPageBreakIndex = 22;
 
     const formatCreatedAt = (value: unknown) => {
         if (value && typeof value === "object" && "toDate" in value) {
@@ -291,16 +292,16 @@ export default function PODetailPage({ params }: { params: Promise<{ id: string 
                         {/* To / Info Section */}
                         <div className="grid grid-cols-12 gap-x-2 gap-y-2 mb-4 text-[12px] font-medium items-center border-b border-black pb-4">
                             <div className="col-span-1">เรียน</div>
-                            <div className="col-span-8 border-b-2 border-black h-5 mr-10 leading-none">{po.vendorName}</div>
+                            <div className="col-span-7 border-b-2 border-black h-5 mr-6 leading-none">{po.vendorName}</div>
                             <div className="col-span-1 text-right">วันที่</div>
-                            <div className="col-span-2 text-right border-b-2 border-black h-5 leading-none">
+                            <div className="col-span-3 text-right border-b-2 border-black h-5 leading-none whitespace-nowrap text-[11px]">
                                 {formatCreatedAt(po.createdAt)}
                             </div>
 
                             <div className="col-span-1">เรื่อง</div>
-                            <div className="col-span-8 border-b-2 border-black h-5 mr-10 leading-none">{currentProject?.name}</div>
+                            <div className="col-span-7 border-b-2 border-black h-5 mr-6 leading-none">{currentProject?.name}</div>
                             <div className="col-span-1 text-right">เลขที่</div>
-                            <div className="col-span-2 text-right border-b-2 border-black h-5 leading-none">{po.poNumber}</div>
+                            <div className="col-span-3 text-right border-b-2 border-black h-5 leading-none whitespace-nowrap text-[11px]">{po.poNumber}</div>
                         </div>
 
                         <div className="flex justify-between items-center mb-4 border-b border-black pb-4">
@@ -313,7 +314,7 @@ export default function PODetailPage({ params }: { params: Promise<{ id: string 
                         </div>
 
                         {/* Table */}
-                        <table className="w-full border-collapse border border-black text-[11px] font-medium font-sans mt-2">
+                        <table className="w-full border-collapse border border-black text-[11px] font-medium font-sans mt-2 print:[-webkit-box-decoration-break:clone] print:[box-decoration-break:clone]">
                             <thead>
                                 <tr>
                                     <th className="border border-black py-1.5 px-0 text-center w-10 font-bold" rowSpan={2}>ลำดับ</th>
@@ -330,7 +331,10 @@ export default function PODetailPage({ params }: { params: Promise<{ id: string 
                             </thead>
                             <tbody>
                                 {displayItems.map((item, index) => (
-                                    <tr key={item.id} className="align-top">
+                                    <tr
+                                        key={item.id}
+                                        className={`align-top ${index === firstPrintPageBreakIndex ? "print:break-after-page print:[&_td]:border-b print:[&_td]:border-black" : ""}`}
+                                    >
                                         <td className="border-x border-black py-1.5 px-1 text-center">{index + 1}</td>
                                         <td className="border-x border-black py-1.5 px-2">{item.description}</td>
                                         <td className="border-x border-black py-1.5 px-1 text-center">{item.quantity}</td>

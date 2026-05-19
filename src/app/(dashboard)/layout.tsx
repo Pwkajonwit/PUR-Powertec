@@ -41,7 +41,7 @@ export default function DashboardLayout({
 
     return (
         <ProjectProvider>
-            <div className="flex h-screen overflow-hidden bg-slate-50 relative">
+            <div className="flex h-screen overflow-hidden bg-slate-50 relative print:h-auto print:overflow-visible print:bg-white">
 
                 {/* Left Sidebar Fixed */}
                 <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />

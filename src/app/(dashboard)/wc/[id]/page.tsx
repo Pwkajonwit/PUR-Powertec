@@ -197,6 +197,7 @@ export default function WCDetailPage({ params }: { params: Promise<{ id: string 
     const itemsTotalBeforeFee = displayItems.reduce((sum, item) => sum + (item.amount || 0), 0);
     const minDisplayRows = 10;
     const emptyRowCount = Math.max(0, minDisplayRows - displayItems.length);
+    const firstPrintPageBreakIndex = 22;
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 print:space-y-0 print:m-0 print:w-full print:max-w-none">
@@ -295,18 +296,18 @@ export default function WCDetailPage({ params }: { params: Promise<{ id: string 
 
                         <div className="grid grid-cols-12 gap-x-2 gap-y-2 mb-4 text-[12px] font-medium items-center border-b border-black pb-4">
                             <div className="col-span-1">เรียน</div>
-                            <div className="col-span-8 border-b-2 border-black h-5 mr-10 leading-none">{wc.vendorName}</div>
+                            <div className="col-span-7 border-b-2 border-black h-5 mr-6 leading-none">{wc.vendorName}</div>
                             <div className="col-span-1 text-right">วันที่</div>
-                            <div className="col-span-2 text-right border-b-2 border-black h-5 leading-none">
+                            <div className="col-span-3 text-right border-b-2 border-black h-5 leading-none whitespace-nowrap text-[11px]">
                                 {wc.issueDate ? formatDate(wc.issueDate) : formatCreatedAt(wc.createdAt)}
                             </div>
 
                             <div className="col-span-1">เรื่อง</div>
-                            <div className="col-span-8 border-b-2 border-black h-5 mr-10 leading-none">
+                            <div className="col-span-7 border-b-2 border-black h-5 mr-6 leading-none">
                                 {wc.title || currentProject?.name}
                             </div>
                             <div className="col-span-1 text-right">เลขที่</div>
-                            <div className="col-span-2 text-right border-b-2 border-black h-5 leading-none">{wc.wcNumber}</div>
+                            <div className="col-span-3 text-right border-b-2 border-black h-5 leading-none whitespace-nowrap text-[11px]">{wc.wcNumber}</div>
                         </div>
 
                         <div className="flex justify-between items-center mb-4 border-b border-black pb-4">
@@ -318,7 +319,7 @@ export default function WCDetailPage({ params }: { params: Promise<{ id: string 
                             </div>
                         </div>
 
-                        <table className="w-full border-collapse border border-black text-[11px] font-medium font-sans mt-2">
+                        <table className="w-full border-collapse border border-black text-[11px] font-medium font-sans mt-2 print:[-webkit-box-decoration-break:clone] print:[box-decoration-break:clone]">
                             <thead>
                                 <tr>
                                     <th className="border border-black py-1.5 px-0 text-center w-10 font-bold" rowSpan={2}>ลำดับ</th>
@@ -335,7 +336,10 @@ export default function WCDetailPage({ params }: { params: Promise<{ id: string 
                             </thead>
                             <tbody>
                                 {displayItems.map((item, index) => (
-                                    <tr key={item.id} className="align-top">
+                                    <tr
+                                        key={item.id}
+                                        className={`align-top ${index === firstPrintPageBreakIndex ? "print:break-after-page print:[&_td]:border-b print:[&_td]:border-black" : ""}`}
+                                    >
                                         <td className="border-x border-black py-1.5 px-1 text-center">{index + 1}</td>
                                         <td className="border-x border-black py-1.5 px-2">{item.description}</td>
                                         <td className="border-x border-black py-1.5 px-1 text-center">{item.quantity}</td>
