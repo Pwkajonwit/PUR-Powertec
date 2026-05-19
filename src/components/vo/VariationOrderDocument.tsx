@@ -52,7 +52,7 @@ export function VariationOrderDocument({
     const printPaperPaddingClass = isAttachmentLayout ? "print:p-[8mm]" : "print:p-0";
 
     return (
-        <div className={`mx-auto overflow-hidden bg-white shadow-[0_22px_70px_rgba(15,23,42,0.12)] print:max-w-none print:shadow-none ${outerWidthClass}`}>
+        <div className={`mx-auto overflow-hidden bg-white shadow-[0_22px_70px_rgba(15,23,42,0.12)] print:max-w-none print:overflow-visible print:shadow-none ${outerWidthClass}`}>
             <div className={`${outerWidthClass} ${paperHeightClass} bg-white ${paperPaddingClass} print:min-h-0 print:h-[297mm] ${printPaperPaddingClass} print:text-black`}>
                 <div className={`${innerMinHeightClass} border border-black ${innerPaddingClass} relative`}>
                     <div className="flex justify-between items-start mb-6">

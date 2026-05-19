@@ -213,8 +213,8 @@ export function PriceComparisonDocumentShell({
     children,
 }: DocumentShellProps) {
     return (
-        <div className="overflow-hidden rounded-lg border border-slate-300 bg-white print:rounded-none print:border-0">
-            <div className="border-b border-slate-300 bg-white px-6 py-6 md:px-8">
+        <div className="overflow-hidden rounded-lg border border-slate-300 bg-white print:overflow-visible print:rounded-none print:border-0">
+            <div className="border-b border-slate-300 bg-white px-6 py-6 md:px-8 print:px-0 print:py-0 print:pb-4">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex flex-col gap-4 md:flex-row md:items-start">
                         <div className="flex h-16 w-16 shrink-0 items-center justify-center border border-slate-300 bg-white">
@@ -266,7 +266,7 @@ export function PriceComparisonDocumentShell({
                 </div>
             </div>
 
-            <div className="space-y-6 px-6 py-6 md:px-8 md:py-8 print:px-0 print:py-0">
+            <div className="space-y-6 px-6 py-6 md:px-8 md:py-8 print:space-y-4 print:px-0 print:py-0">
                 {children}
             </div>
         </div>
@@ -285,7 +285,7 @@ export function DocumentSection({
     children: ReactNode;
 }) {
     return (
-        <section className="space-y-3">
+        <section className="space-y-3 print:break-inside-auto">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
                     <h2 className="text-base font-semibold text-slate-950">{title}</h2>
@@ -337,22 +337,22 @@ export function DocumentMetricGrid({ items }: { items: MetricItem[] }) {
 
 export function ComparisonMatrix({ quotes, recommendedQuoteId }: ComparisonMatrixProps) {
     return (
-        <div className="overflow-hidden border border-slate-300">
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
+        <div className="overflow-hidden border border-slate-300 print:overflow-visible">
+            <div className="overflow-x-auto print:overflow-visible">
+                <table className="min-w-full divide-y divide-slate-200 print:w-full print:table-fixed print:text-[8px]">
                     <thead className="bg-slate-100 text-slate-700">
                         <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.12em]">
-                            <th className="px-4 py-3">ผู้เสนอราคา</th>
-                            <th className="px-4 py-3">อ้างอิง</th>
-                            <th className="px-4 py-3">เครดิต</th>
-                            <th className="px-4 py-3">ส่งมอบ</th>
-                            <th className="px-4 py-3">VAT</th>
-                            <th className="px-4 py-3">Compliance</th>
-                            <th className="px-4 py-3 text-right">Subtotal</th>
-                            <th className="px-4 py-3 text-right">VAT</th>
-                            <th className="px-4 py-3 text-right">Total</th>
-                            <th className="px-4 py-3 text-center">Rank</th>
-                            <th className="px-4 py-3 text-center">ผลเลือก</th>
+                            <th className="px-4 py-3 print:w-[18%] print:px-1 print:py-1">ผู้เสนอราคา</th>
+                            <th className="px-4 py-3 print:w-[9%] print:px-1 print:py-1">อ้างอิง</th>
+                            <th className="px-4 py-3 print:w-[7%] print:px-1 print:py-1">เครดิต</th>
+                            <th className="px-4 py-3 print:w-[7%] print:px-1 print:py-1">ส่งมอบ</th>
+                            <th className="px-4 py-3 print:w-[9%] print:px-1 print:py-1">VAT</th>
+                            <th className="px-4 py-3 print:w-[11%] print:px-1 print:py-1">Compliance</th>
+                            <th className="px-4 py-3 text-right print:w-[10%] print:px-1 print:py-1">Subtotal</th>
+                            <th className="px-4 py-3 text-right print:w-[8%] print:px-1 print:py-1">VAT</th>
+                            <th className="px-4 py-3 text-right print:w-[10%] print:px-1 print:py-1">Total</th>
+                            <th className="px-4 py-3 text-center print:w-[5%] print:px-1 print:py-1">Rank</th>
+                            <th className="px-4 py-3 text-center print:w-[6%] print:px-1 print:py-1">ผลเลือก</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
@@ -366,8 +366,8 @@ export function ComparisonMatrix({ quotes, recommendedQuoteId }: ComparisonMatri
                             const isRecommended = recommendedQuoteId === quote.id;
                             return (
                                 <tr key={quote.id} className={isRecommended ? "bg-slate-50" : ""}>
-                                    <td className="px-4 py-3">
-                                        <div className="min-w-[180px]">
+                                    <td className="px-4 py-3 print:px-1 print:py-1">
+                                        <div className="min-w-[180px] print:min-w-0">
                                             <p className="text-sm font-semibold text-slate-900">
                                                 {quote.supplierName || "-"}
                                             </p>
@@ -376,16 +376,16 @@ export function ComparisonMatrix({ quotes, recommendedQuoteId }: ComparisonMatri
                                             </p>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{quote.quoteRef || "-"}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{quote.creditDays || 0} วัน</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{quote.deliveryDays || 0} วัน</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{getVatModeLabel(quote.vatMode)}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{getComplianceLabel(quote.items)}</td>
-                                    <td className="px-4 py-3 text-right text-sm text-slate-700">{formatMoney(Number(quote.subTotal || 0))}</td>
-                                    <td className="px-4 py-3 text-right text-sm text-slate-700">{formatMoney(Number(quote.vatAmount || 0))}</td>
-                                    <td className="px-4 py-3 text-right text-sm font-semibold text-slate-950">{formatMoney(Number(quote.totalAmount || 0))}</td>
-                                    <td className="px-4 py-3 text-center text-sm font-semibold text-slate-900">{quote.overallRank || "-"}</td>
-                                    <td className="px-4 py-3 text-center">
+                                    <td className="px-4 py-3 text-sm text-slate-600 print:px-1 print:py-1">{quote.quoteRef || "-"}</td>
+                                    <td className="px-4 py-3 text-sm text-slate-600 print:px-1 print:py-1">{quote.creditDays || 0} วัน</td>
+                                    <td className="px-4 py-3 text-sm text-slate-600 print:px-1 print:py-1">{quote.deliveryDays || 0} วัน</td>
+                                    <td className="px-4 py-3 text-sm text-slate-600 print:px-1 print:py-1">{getVatModeLabel(quote.vatMode)}</td>
+                                    <td className="px-4 py-3 text-sm text-slate-600 print:px-1 print:py-1">{getComplianceLabel(quote.items)}</td>
+                                    <td className="px-4 py-3 text-right text-sm text-slate-700 print:px-1 print:py-1">{formatMoney(Number(quote.subTotal || 0))}</td>
+                                    <td className="px-4 py-3 text-right text-sm text-slate-700 print:px-1 print:py-1">{formatMoney(Number(quote.vatAmount || 0))}</td>
+                                    <td className="px-4 py-3 text-right text-sm font-semibold text-slate-950 print:px-1 print:py-1">{formatMoney(Number(quote.totalAmount || 0))}</td>
+                                    <td className="px-4 py-3 text-center text-sm font-semibold text-slate-900 print:px-1 print:py-1">{quote.overallRank || "-"}</td>
+                                    <td className="px-4 py-3 text-center print:px-1 print:py-1">
                                         {isRecommended ? (
                                             <DocumentStatus label="ผู้เสนอที่เลือก" tone="success" />
                                         ) : (

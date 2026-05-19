@@ -54,17 +54,17 @@ export function getPurchaseRequisitionStatusTone(status?: string) {
 
 export function PurchaseRequisitionItemsTable({ items }: { items: PurchaseRequisitionItem[] }) {
     return (
-        <div className="overflow-hidden border border-slate-300">
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
+        <div className="overflow-hidden border border-slate-300 print:overflow-visible">
+            <div className="overflow-x-auto print:overflow-visible">
+                <table className="min-w-full divide-y divide-slate-200 print:w-full print:text-[10px]">
                     <thead className="bg-slate-100">
                         <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                            <th className="px-4 py-3">ลำดับ</th>
-                            <th className="px-4 py-3">รายละเอียด</th>
-                            <th className="px-4 py-3">จำนวน</th>
-                            <th className="px-4 py-3">หน่วย</th>
-                            <th className="px-4 py-3 text-right">ราคา/หน่วย</th>
-                            <th className="px-4 py-3 text-right">รวม</th>
+                            <th className="px-4 py-3 print:px-2 print:py-2">ลำดับ</th>
+                            <th className="px-4 py-3 print:px-2 print:py-2">รายละเอียด</th>
+                            <th className="px-4 py-3 print:px-2 print:py-2">จำนวน</th>
+                            <th className="px-4 py-3 print:px-2 print:py-2">หน่วย</th>
+                            <th className="px-4 py-3 text-right print:px-2 print:py-2">ราคา/หน่วย</th>
+                            <th className="px-4 py-3 text-right print:px-2 print:py-2">รวม</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
@@ -76,8 +76,8 @@ export function PurchaseRequisitionItemsTable({ items }: { items: PurchaseRequis
                             </tr>
                         ) : items.map((item, index) => (
                             <tr key={item.id}>
-                                <td className="px-4 py-3 text-sm text-slate-500">{index + 1}</td>
-                                <td className="px-4 py-3 text-sm text-slate-900">
+                                <td className="px-4 py-3 text-sm text-slate-500 print:px-2 print:py-2">{index + 1}</td>
+                                <td className="px-4 py-3 text-sm text-slate-900 print:px-2 print:py-2">
                                     <p className="font-medium">{item.description}</p>
                                     {item.category ? (
                                         <p className="mt-1 text-xs text-slate-500">หมวดหมู่: {item.category}</p>
@@ -86,10 +86,10 @@ export function PurchaseRequisitionItemsTable({ items }: { items: PurchaseRequis
                                         <p className="mt-1 whitespace-pre-wrap text-xs text-slate-500">{item.notes}</p>
                                     ) : null}
                                 </td>
-                                <td className="px-4 py-3 text-sm text-slate-600">{Number(item.quantity || 0).toLocaleString()}</td>
-                                <td className="px-4 py-3 text-sm text-slate-600">{item.unit || "-"}</td>
-                                <td className="px-4 py-3 text-right text-sm text-slate-900">{formatMoney(Number(item.unitPrice || 0))}</td>
-                                <td className="px-4 py-3 text-right text-sm font-semibold text-slate-950">{formatMoney(Number(item.amount || 0))}</td>
+                                <td className="px-4 py-3 text-sm text-slate-600 print:px-2 print:py-2">{Number(item.quantity || 0).toLocaleString()}</td>
+                                <td className="px-4 py-3 text-sm text-slate-600 print:px-2 print:py-2">{item.unit || "-"}</td>
+                                <td className="px-4 py-3 text-right text-sm text-slate-900 print:px-2 print:py-2">{formatMoney(Number(item.unitPrice || 0))}</td>
+                                <td className="px-4 py-3 text-right text-sm font-semibold text-slate-950 print:px-2 print:py-2">{formatMoney(Number(item.amount || 0))}</td>
                             </tr>
                         ))}
                     </tbody>
